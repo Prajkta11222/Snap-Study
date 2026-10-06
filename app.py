@@ -1,4 +1,5 @@
 import smtplib
+import time
 
 import streamlit as st
 from email.mime.text import MIMEText
@@ -27,14 +28,39 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* ── Design tokens ────────────────────────────────── */
     :root {
-        --ink: #203238;
-        --muted-ink: #657579;
-        --paper: #f5f7f5;
-        --surface: #ffffff;
-        --line: #dce5e1;
-        --accent: #247b78;
-        --accent-dark: #195c5a;
+        --ink:         #1a2e35;
+        --ink-soft:    #3d5a63;
+        --muted-ink:   #6b8a91;
+        --paper:       #f4f7f6;
+        --surface:     #ffffff;
+        --surface-alt: #f9fbfa;
+        --line:        #dde6e3;
+        --line-light:  #eaf0ee;
+        --accent:      #1a8a7d;
+        --accent-hover:#137a6e;
+        --accent-light:#e6f5f2;
+        --accent-glow: rgba(26, 138, 125, 0.12);
+        --shadow-sm:   0 1px 3px rgba(26, 46, 53, 0.04),
+                       0 4px 12px rgba(26, 46, 53, 0.03);
+        --shadow-md:   0 2px 8px rgba(26, 46, 53, 0.05),
+                       0 8px 28px rgba(26, 46, 53, 0.06);
+        --shadow-lg:   0 4px 12px rgba(26, 46, 53, 0.06),
+                       0 16px 40px rgba(26, 46, 53, 0.08);
+        --radius-sm:   8px;
+        --radius-md:   12px;
+        --radius-lg:   16px;
+        --font:        'Inter', -apple-system, BlinkMacSystemFont,
+                       'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ── Global base ──────────────────────────────────── */
+    html, body, [data-testid="stAppViewContainer"],
+    [data-testid="stApp"] {
+        font-family: var(--font) !important;
     }
 
     [data-testid="stAppViewContainer"] {
@@ -42,101 +68,234 @@ st.markdown(
     }
 
     [data-testid="stHeader"] {
-        background: transparent;
+        background: transparent !important;
     }
 
     .block-container {
-        max-width: 860px;
-        padding-top: 3.25rem;
-        padding-bottom: 4rem;
+        max-width: 840px;
+        padding-top: 2.5rem;
+        padding-bottom: 3.5rem;
     }
 
+    /* ── Fade-in animation ────────────────────────────── */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Typography ───────────────────────────────────── */
     h1 {
+        font-family: var(--font) !important;
         color: var(--ink);
-        font-size: 2.15rem;
-        letter-spacing: -0.02em;
-        margin-bottom: 0.35rem;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.15rem;
+        line-height: 1.2;
+    }
+
+    h2, h3, h4 {
+        font-family: var(--font) !important;
+        color: var(--ink);
+        letter-spacing: -0.015em;
+    }
+
+    p, li, span, div {
+        font-family: var(--font) !important;
     }
 
     [data-testid="stCaptionContainer"] {
         color: var(--muted-ink);
+        font-size: 0.88rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
     }
 
+    /* ── Alert / info box ─────────────────────────────── */
     [data-testid="stAlert"] {
-        border: 1px solid #cfe2df;
-        border-radius: 12px;
-        background: #edf6f3;
-        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--accent-light);
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+        animation: fadeInUp 0.4s ease-out;
     }
 
+    /* ── Onboarding form ──────────────────────────────── */
     div[data-testid="stForm"] {
         border: 1px solid var(--line);
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         background: var(--surface);
-        padding: 1.25rem 1.35rem 1.35rem;
-        box-shadow: 0 10px 30px rgba(32, 50, 56, 0.06);
+        padding: 1.6rem 1.5rem 1.65rem;
+        box-shadow: var(--shadow-md);
+        animation: fadeInUp 0.45s ease-out 0.1s both;
     }
 
+    /* ── Input fields ─────────────────────────────────── */
     div[data-testid="stTextInput"] label {
         color: var(--ink);
         font-weight: 600;
+        font-size: 0.88rem;
+        letter-spacing: 0.01em;
+        margin-bottom: 0.25rem;
     }
 
+    div[data-testid="stTextInput"] input {
+        border: 1.5px solid var(--line) !important;
+        border-radius: var(--radius-sm) !important;
+        background: var(--surface-alt) !important;
+        font-family: var(--font) !important;
+        font-size: 0.92rem !important;
+        padding: 0.6rem 0.75rem !important;
+        transition: border-color 200ms ease, box-shadow 200ms ease;
+    }
+
+    div[data-testid="stTextInput"] input:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    }
+
+    /* ── Buttons ──────────────────────────────────────── */
     div.stButton > button,
     div[data-testid="stFormSubmitButton"] button {
-        border: 1px solid var(--accent);
-        border-radius: 10px;
+        border: none;
+        border-radius: var(--radius-sm);
         background: var(--accent);
         color: white;
+        font-family: var(--font) !important;
         font-weight: 700;
+        font-size: 0.92rem;
+        letter-spacing: 0.01em;
         min-height: 2.75rem;
-        transition: background 160ms ease, border-color 160ms ease;
+        box-shadow: 0 2px 8px rgba(26, 138, 125, 0.18);
+        transition: all 200ms ease;
     }
 
     div.stButton > button:hover,
     div[data-testid="stFormSubmitButton"] button:hover {
-        border-color: var(--accent-dark);
-        background: var(--accent-dark);
+        background: var(--accent-hover);
         color: white;
+        box-shadow: 0 4px 14px rgba(26, 138, 125, 0.25);
+        transform: translateY(-1px);
+    }
+
+    div.stButton > button:active,
+    div[data-testid="stFormSubmitButton"] button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(26, 138, 125, 0.15);
     }
 
     div.stButton > button:disabled {
-        border-color: #cbd5d2;
-        background: #dfe6e3;
-        color: #7d8987;
+        border: none;
+        background: var(--line);
+        color: var(--muted-ink);
+        box-shadow: none;
+        transform: none;
+        cursor: not-allowed;
     }
 
+    /* ── Chat messages ────────────────────────────────── */
     [data-testid="stChatMessage"] {
-        border: 1px solid var(--line);
-        border-radius: 14px;
+        border: 1px solid var(--line-light);
+        border-radius: var(--radius-lg);
         background: var(--surface);
-        padding: 0.8rem 1rem;
-        margin: 0.65rem 0;
-        box-shadow: 0 5px 16px rgba(32, 50, 56, 0.04);
+        padding: 0.85rem 1.1rem;
+        margin: 0.5rem 0;
+        box-shadow: var(--shadow-sm);
+        animation: fadeInUp 0.35s ease-out;
+        transition: box-shadow 200ms ease;
+    }
+
+    [data-testid="stChatMessage"]:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Assistant bubble — subtle teal tint */
+    [data-testid="stChatMessage"][data-testid-type="assistant"],
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+        background: linear-gradient(135deg, var(--surface) 0%, #f2faf8 100%);
+        border-color: #d3ece7;
     }
 
     [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
         color: var(--ink);
+        line-height: 1.65;
     }
 
+    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {
+        margin-bottom: 0.5em;
+    }
+
+    /* ── Chat input ───────────────────────────────────── */
     [data-testid="stChatInput"] {
         border-color: var(--line);
     }
 
     [data-testid="stChatInput"] textarea {
-        border-radius: 12px;
-        background: var(--surface);
+        border-radius: var(--radius-md) !important;
+        background: var(--surface) !important;
+        font-family: var(--font) !important;
+        font-size: 0.92rem !important;
+        border: 1.5px solid var(--line) !important;
+        transition: border-color 200ms ease, box-shadow 200ms ease;
     }
 
+    [data-testid="stChatInput"] textarea:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    }
+
+    /* ── Spinner ──────────────────────────────────────── */
+    [data-testid="stSpinner"] {
+        color: var(--accent) !important;
+    }
+
+    /* ── Success / Error messages ──────────────────────── */
+    div[data-testid="stAlert"][data-baseweb] {
+        border-radius: var(--radius-md);
+        font-size: 0.92rem;
+    }
+
+    /* ── Scrollbar polish ─────────────────────────────── */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--line);
+        border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted-ink);
+    }
+
+    /* ── Images in chat ───────────────────────────────── */
+    [data-testid="stChatMessage"] [data-testid="stImage"] img {
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line-light);
+    }
+
+    /* ── Responsive ───────────────────────────────────── */
     @media (max-width: 640px) {
         .block-container {
-            padding-top: 2rem;
-            padding-left: 1rem;
-            padding-right: 1rem;
+            padding-top: 1.5rem;
+            padding-left: 0.85rem;
+            padding-right: 0.85rem;
         }
 
         h1 {
-            font-size: 1.85rem;
+            font-size: 1.65rem;
+        }
+
+        div[data-testid="stForm"] {
+            padding: 1.25rem 1.1rem 1.3rem;
+        }
+
+        [data-testid="stChatMessage"] {
+            padding: 0.7rem 0.85rem;
+            border-radius: var(--radius-md);
         }
     }
     </style>
@@ -199,12 +358,18 @@ def send_email(to_address, subject, body):
 def ask_gemini(parts):
     """Send content to the current Gemini conversation."""
 
-    try:
-        response = st.session_state.chat.send_message(parts)
-        return response.text or "Gemini did not return a response. Please try again."
+    max_retries = 3
 
-    except Exception as error:
-        return f"Gemini error: {error}"
+    for attempt in range(max_retries):
+        try:
+            response = st.session_state.chat.send_message(parts)
+            return response.text or "Gemini did not return a response. Please try again."
+
+        except Exception as error:
+            if "503" in str(error) and attempt < max_retries - 1:
+                time.sleep(2)
+                continue
+            return f"Gemini error: {error}"
 
 
 # =========================================================
